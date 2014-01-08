@@ -199,7 +199,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	private function __cleanForIndex(Model $Model, $index) {
 		$index = iconv('UTF-8', 'ASCII//TRANSLIT', $index);
 		$index = preg_replace('/[\ ]+/',' ',$index);
-		if (method_exists('cleanForIndex', $Model)) {
+		if (method_exists($Model, 'cleanForIndex')) {
 			$index = $Model->cleanForIndex($index);
 		}
 		$index = trim($index);

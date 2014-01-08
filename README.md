@@ -22,6 +22,12 @@ What you end up with is having you cake and eating it too.
 
 ## Install
 
+Setup the
+[Elasitc](https://github.com/dkullmann/CakePHP-Elastic-Search-DataSource)
+Plugin and setup the database config, but do not put it's behavior into any
+Model nor create any indexes.  All of that setup is handled automatically
+within this Plugin.
+
 ```
 git submodule add https://github.com/zeroasterisk/CakePHP-ElasticSearchIndex app/Plugin/ElasticSearchIndex
 # or
@@ -73,6 +79,7 @@ If you are using the [CakeDC/search](https://github.com/CakeDC/search) plugin,
 you can use this to make subquery or query filters... *(which is sweet!)*
 
 * **TODO: make a simple find/search helper on the behaivor**
+* **TODO: cache the `_mapping` query for better performance**
 
 ## Attribution
 

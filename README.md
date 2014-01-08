@@ -20,12 +20,12 @@ What you end up with is having you cake and eating it too.
 * The searchy goodness of ElasticSearch is avaialble to you against this
   indexed, second copy.
 
-# Install
+## Install
 
 ```
-git submodule add https://github.com/zeroasterisk/CakePHP-Elastic-Search-Index app/Plugin/ElasticSearchIndex
+git submodule add https://github.com/zeroasterisk/CakePHP-ElasticSearchIndex app/Plugin/ElasticSearchIndex
 # or
-git clone https://github.com/zeroasterisk/CakePHP-Elastic-Search-Index app/Plugin/ElasticSearchIndex
+git clone https://github.com/zeroasterisk/CakePHP-ElasticSearchIndex app/Plugin/ElasticSearchIndex
 
 ```
 
@@ -51,7 +51,30 @@ In your `Model` you can also set `fields` to limit what gets indexed
 	);
 ```
 
-# Attribution
+## How to Save Records
+
+It's automatic, after every save, it will post that record to the database.
+
+* **TODO: ensure we are only saving one record per Model+Id, not multiple**
+* **TODO: delete the ElasticSearchIndex record upon delete**
+
+## How to Search
+
+There's a really useful method on the behavior, which returns only the primary
+keys for search results.  This can easily be added to any `conditions` array.
+
+```
+$conditions = array(
+	"{$this->alias}.{$this->primaryKey}" => $this->searchAndReturnAssociationKeys('Search Term'),
+);
+```
+
+If you are using the [CakeDC/search](https://github.com/CakeDC/search) plugin,
+you can use this to make subquery or query filters... *(which is sweet!)*
+
+* **TODO: make a simple find/search helper on the behaivor**
+
+## Attribution
 
 This project is really a simple re-work of Searchable/SearchIndex to work in
 concert with the Elastic DataSource...  The guts of the work is theirs.  Big thanks!

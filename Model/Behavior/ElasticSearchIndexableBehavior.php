@@ -18,7 +18,6 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		'rebuildOnUpdate' => true, // do we want to update the record? (yeah!)
 		'queryAfterSave' => true, // slower, but less likely to corrupt search records
 		'fields' => '*', // only consider these fields
-		'stopwords_lang' => false, // false = all, or: 'english' or 'german'
 	);
 
 	/**
@@ -27,14 +26,6 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @var array
 	 */
 	public $settings = array();
-
-	/**
-	 * placeholder for the array of stopwords which will be excluded from search inputs
-	 * configure your own with Configure::write("ElasticSearchIndex.stopwords.$stopwords_lang", array(...))
-	 *
-	 * @var array
-	 */
-	public $stopwords = array();
 
 	/**
 	 * placeholder for the ElasticSearchIndex Model (object)
@@ -192,30 +183,27 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		}
 
 		$index = join(' . ', $index);
-		$index = iconv('UTF-8', 'ASCII//TRANSLIT', $index);
-		$index = preg_replace('/[\ ]+/',' ',$index);
-		$index = $this->__removeStopwords($Model, $index);
+		$index = $this->__cleanForIndex($Model, $index);
 		return $index;
 	}
 
 	/**
-	 * Remove known "stop words" from the indexed data.
-	 *  MySQL Stop Words (wont be included in the full text index)
-	 *  http://dev.mysql.com/doc/refman/5.1/en/fulltext-stopwords.html
+	 * Clean for saving as an index
+	 *
+	 * Optionally post-process and customize by defining the method cleanForIndex() on the Model.
 	 *
 	 * @param Model $Model
 	 * @param string $index
 	 * @return string $index
 	 */
-	private function __removeStopwords(Model $Model, $index) {
-		$words = explode(' ', $index);
-		$stopwords = $this->stopwords($Model);
-		foreach (array_keys($words) as $i) {
-			if (array_key_exists(md5($words[$i]), $stopwords)) {
-				unset($words[$i]);
-			}
+	private function __cleanForIndex(Model $Model, $index) {
+		$index = iconv('UTF-8', 'ASCII//TRANSLIT', $index);
+		$index = preg_replace('/[\ ]+/',' ',$index);
+		if (method_exists('cleanForIndex', $Model)) {
+			$index = $Model->cleanForIndex($index);
 		}
-		return implode(' ', $words);
+		$index = trim($index);
+		return $index;
 	}
 
 	/**
@@ -327,61 +315,6 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		$association_keys = Hash::extract($results, '{n}.ElasticSearchIndex.association_key');
 		//debug(compact('association_keys'));die('x');
 		return $association_keys;
-	}
-
-	/**
-	 * A simple retrieval of the stopwords being used, just in case they are needed
-	 *
-	 * @param Model $Model
-	 * @return array $stopwords
-	 */
-	public function stopwords(Model $Model) {
-		if (!empty($this->stopwords)) {
-			return $this->stopwords;
-		}
-		$this->stopwords = $this->stopwordsSetup($Model);
-		return $this->stopwords;
-	}
-
-	/**
-	 * setup the stopwords
-	 *
-	 * @param Model $Model
-	 * @return array $stopwords
-	 */
-	public function stopwordsSetup(Model $Model) {
-		// determine stopwordsSe
-		$lang = $this->settings[$Model->name]['stopwords_lang'];
-		if (empty($lang)) {
-			$lang = Configure::read('ElasticSearchIndex.stopwords_lang');
-		}
-		if (empty($lang)) {
-			$lang = 'all';
-		}
-		Configure::load('ElasticSearchIndex.stopwords');
-		$stopwords = Configure::read('ElasticSearchIndex.stopwords');
-		foreach (array_keys($stopwords) as $_lang) {
-			if ($lang !== 'all' && $lang !== $_lang) {
-				continue;
-			}
-			$stopwords = array_merge($stopwords, $this->__stopwordsHash($stopwords[$_lang]));
-		}
-		return $stopwords;
-	}
-
-	/**
-	 * process the stopwords array (already loaded into the property)
-	 * sets the key to be the md5() hash of the word
-	 *
-	 * @param array $stopwords
-	 * @return array $stopwords with the keys = md5($word)
-	 */
-	private function __stopwordsHash($stopwords) {
-		$output = array();
-		foreach ($stopwords as $word) {
-			$output[md5($word)] = $word;
-		}
-		return $output;
 	}
 
 	/**

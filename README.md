@@ -17,12 +17,12 @@ plugin.
 What you end up with is having you cake and eating it too.
 
 * Your Model and datasource are unchanged and work as before.
-** all your data is still where it has always been
-** you can still do joins
-** non-search conditions can still work on the normal fields
+ * all your data is still where it has always been
+ * you can still do joins
+ * non-search conditions can still work on the normal fields
 * The searchy goodness of ElasticSearch / Lucene is avaialble to you
-** The indexed string for each record is a customizable second copy of the data's text
-** It's avaialble on ElasticSearch for any other usage as well
+ * The indexed string for each record is a customizable second copy of the data's text
+ * It's avaialble on ElasticSearch for any other usage as well
 
 Now you can search by
 

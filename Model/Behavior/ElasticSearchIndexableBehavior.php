@@ -43,7 +43,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		// limit the search results to this many results
 		'limit' => 200,
 		// details needed to link to Model
-		'foreignKey' => false, // primaryKey to save against
+		'foreignKey' => null, // primaryKey to save against
 		// do we build the index after save? (yes...)
 		'rebuildOnUpdate' => true,
 		// when we build the index, consider these fields (ignonred if custom method on model)
@@ -99,7 +99,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @return boolean
 	 */
 	public function setup(Model $Model, $config = array()) {
-		$config = Hash::merge($this->__defaultSettings, $config);
+		$config = Hash::merge(Hash::filter($this->__defaultSettings), $config);
 		if (!empty($config['url'])) {
 			$config = Hash::merge($config, $this->setupParseUrl($config['url']));
 		} elseif (empty($config['table'])) {

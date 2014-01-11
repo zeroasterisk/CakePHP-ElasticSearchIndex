@@ -9,27 +9,53 @@ class ElasticSearchIndex extends ElasticSearchIndexAppModel {
 
 	/**
 	 * name of the table used
+	 * it is overwritten via the ElasticSearchIndexableBehavior w/ the source Model's table name
 	 */
-	public $useTable = 'esindex';
+	public $useTable = 'elastic_search_index';
+
+	/**
+	 * DOESNT EXIST YET :( ----------
+	 *
+	 * this is a special flag for the ElasticSource plugin telling it to omit
+	 * the model alias from the documents stored... (no need for nesting)
+	 *
+	 * public $useModelAlias = false;
+	 *
+	 * ^ DOESNT EXIST YET :( ----------
+	 */
 
 	/**
 	 * name of the dbconfig used
 	 * !important - needs to be setup according to!
 	 * https://github.com/dkullmann/CakePHP-Elastic-Search-DataSource
+	 *
+	 * This value is really set in __construct()
 	 */
-	public $useDbConfig = 'index';
+	public $useDbConfig = 'index'; // set in __construct()
 
 	/**
 	 * schema (static schema built into table)
 	 */
 	public $_mapping = array(
-		'id' => array('type' => 'integer', 'null' => false, 'default' => null, 'key' => 'primary'),
+		'id' => array('type' => 'string', 'null' => false, 'default' => null, 'length' => 36, 'key' => 'primary', 'collate' => 'utf8_unicode_ci', 'charset' => 'utf8'),
 		'association_key' => array('type' => 'string', 'null' => false, 'default' => null, 'length' => 36, 'key' => 'index', 'collate' => 'utf8_unicode_ci', 'charset' => 'utf8'),
 		'model' => array('type' => 'string', 'null' => false, 'default' => null, 'length' => 128, 'collate' => 'utf8_unicode_ci', 'charset' => 'utf8'),
 		'data' => array('type' => 'string', 'null' => false, 'default' => null, 'key' => 'index', 'collate' => 'utf8_unicode_ci', 'charset' => 'utf8'),
 		'created' => array('type' => 'datetime', 'null' => false, 'default' => null),
 		'modified' => array('type' => 'datetime', 'null' => false, 'default' => null),
 	);
+
+	/**
+	 * Setup this model
+	 */
+	public function __construct() {
+		parent::__construct();
+		// force the useDbConfig = 'index' (or whatever is in Configure)
+		$dbconfig = Configure::read('ElasticSearchIndex.useDbConfig');
+		if (!empty($dbconfig)) {
+			$this->useDbConfig = $dbconfig;
+		}
+	}
 
 	/**
 	 *
@@ -68,18 +94,10 @@ class ElasticSearchIndex extends ElasticSearchIndexAppModel {
 	 * @return mixed $queryData
 	 */
 	public function beforeFind($queryData) {
-		$models_condition = false;
-		if (isset($queryData['conditions'])) {
-			if ($models_condition) {
-				if (is_string($queryData['conditions'])) {
-					$queryData['conditions'] .= ' AND (' . join(' OR ',$models_condition) . ')';
-				} else {
-					$queryData['conditions'][] = array('OR' => $models_condition);
-				}
-			}
-		} else {
-			if ($models_condition) {
-				$queryData['conditions'][] = array('OR' => $models_condition);
+		if (!empty($this->models)) {
+			$models_condition = array();
+			foreach ($this->models as $model) {
+				$Model = ClassRegistry::init($model);
 			}
 		}
 		return $queryData;
@@ -96,9 +114,9 @@ class ElasticSearchIndex extends ElasticSearchIndexAppModel {
 	public function afterFind($results, $primary = false) {
 		if ($primary) {
 			foreach ($results as $x => $result) {
-				if (!empty($result['SearchIndex']['model'])) {
-					$Model = ClassRegistry::init($result['SearchIndex']['model']);
-					$results[$x]['SearchIndex']['displayField'] = $Model->displayField;
+				if (!empty($result['ElasticSearchIndex']['model'])) {
+					$Model = ClassRegistry::init($result['ElasticSearchIndex']['model']);
+					$results[$x]['ElasticSearchIndex']['displayField'] = $Model->displayField;
 				}
 			}
 		}
@@ -130,5 +148,13 @@ class ElasticSearchIndex extends ElasticSearchIndexAppModel {
 	public function fuzzyize($query) {
 		$query = preg_replace('/\s+/', '\s*', $query);
 		return $query;
+	}
+
+	/**
+	 * sometimes, for debugging, you might want to get the log of the queries to the ElasticSearch server
+	 */
+	public function getLog() {
+		$db = ConnectionManager::getDataSource($this->useDbConfig);
+		return $db->getLog();
 	}
 }

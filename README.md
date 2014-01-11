@@ -1,10 +1,10 @@
 # Elastic Search Index
 
-This plugin allow for a very easy search index powered by ElasticSearch with
-all kinds of lucene and NLP goodness.
-
-Note: it is working great, but we could use more ElasticSearch special sauce if
-you know any.
+This plugin allow for a very easy search index powered by
+[ElasticSearch](http://www.elasticsearch.org/)
+with all kinds of
+[Lucene](http://lucene.apache.org/)
+powered goodness. *(it powers GitHub)*
 
 With this, you keep your models on your own normal (default) datasource.  All
 saves and finds and joins and callbacks... normal.
@@ -17,8 +17,25 @@ plugin.
 What you end up with is having you cake and eating it too.
 
 * Your Model and datasource are unchanged and work as before.
-* The searchy goodness of ElasticSearch is avaialble to you against this
-  indexed, second copy.
+** all your data is still where it has always been
+** you can still do joins
+** non-search conditions can still work on the normal fields
+* The searchy goodness of ElasticSearch / Lucene is avaialble to you
+** The indexed string for each record is a customizable second copy of the data's text
+** It's avaialble on ElasticSearch for any other usage as well
+
+Now you can search by
+
+* term: `foo`
+* multi-term: `foo bar`
+* partials: `fo*`
+* partials in the front: `*oo`
+* phrases: `"foo bar"`
+* fuzzy term: `~bars` *(prefix with `~`)*
+* ... and more ... (suggestions?)
+
+*Note: it is working great, but we could use more ElasticSearch special sauce if
+you want to help improve it.*
 
 ## Install
 

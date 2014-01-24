@@ -140,7 +140,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		if (!Cache::read("elasticsearchindexablebehavior_setup_{$config['table']}", 'default')) {
 			$this->autoSetupElasticSearchIndex($config);
 			$this->autoSetupElasticSearchMapping($config);
-			//Cache::write("elasticsearchindexablebehavior_setup_{$config['table']}", true, 'default');
+			Cache::write("elasticsearchindexablebehavior_setup_{$config['table']}", true, 'default');
 		}
 		$this->ElasticSearchRequests[$Model->alias] = $this->ElasticSearchRequest;
 		return $this->ElasticSearchRequest;
@@ -540,6 +540,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 				} else {
 					$failed++;
 				}
+				sleep(rand(0,3));
 			}
 		} while (count($records) == $limit);
 		return sprintf("re-indexed %d records (%d failed)", $indexed, $failed);

@@ -208,9 +208,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @return boolean
 	 */
 	public function afterDelete(Model $Model) {
-		$this->setupIndex($Model);
-		$this->deleteIndexByModelId($Model, $Model->id);
-		return true;
+		return $this->deleteIndexByModelId($Model, $Model->id);
 	}
 
 	/**
@@ -339,9 +337,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @return boolean
 	 */
 	public function deleteIndexId($Model, $id) {
-		// setup ElasticSearchIndex Model
-		$this->setupIndex($Model);
-		return $this->ElasticSearchRequest->deleteRecord($id);
+		return $this->setupIndex($Model)->deleteRecord($id);
 	}
 
 	/**

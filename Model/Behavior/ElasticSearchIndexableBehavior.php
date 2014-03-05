@@ -191,6 +191,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		}
 		// $data will be gathered from $Model->data if empty
 		$data = $Model->data;
+		$resetData = $data;
 		if (!empty($this->settings[$Model->alias]['queryAfterSave'])) {
 			// query after save, to get more complete records
 			$data = $this->_getDataForIndex($Model, $association_key);
@@ -198,7 +199,8 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		if (!$this->saveToIndex($Model, $association_key, $data)) {
 			throw new ElasticSearchIndexException('afterSave triggered saveToIndex failed');
 		}
-		return true;
+		$Model->data = $resetData;
+		return parent::afterSave($Model, $created, $options);
 	}
 
 	/**

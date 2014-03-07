@@ -205,6 +205,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 
 	/**
 	 * After a record is deleted, also remove it's ElasticSearchIndex row
+	 *  -- note: be sure that the Model->id is set
 	 *
 	 * @param Model $Model
 	 * @return boolean
@@ -339,7 +340,11 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @return boolean
 	 */
 	public function deleteIndexId($Model, $id) {
-		return $this->setupIndex($Model)->deleteRecord($id);
+		try {
+			return $this->setupIndex($Model)->deleteRecord($id);
+		} catch (Exception $e) {
+			return true;
+		}
 	}
 
 	/**

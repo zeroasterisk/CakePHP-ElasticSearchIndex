@@ -534,7 +534,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @param array $conditions
 	 * @return string $status
 	 */
-	public function reIndexAll(Model $Model, $conditions = null) {
+	public function reIndexAll(Model $Model, $conditions = null, $doSleep = false) {
 		$limit = 100;
 		$page = $indexed = $failed = 0;
 		do {
@@ -546,7 +546,9 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 				} else {
 					$failed++;
 				}
-				sleep(rand(0,3));
+				if ($doSleep) {
+					sleep(rand(0,3));
+				}
 			}
 		} while (count($records) == $limit);
 		return sprintf("re-indexed %d records (%d failed)", $indexed, $failed);

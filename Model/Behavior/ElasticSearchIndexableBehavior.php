@@ -181,6 +181,9 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @return boolean (always returns true)
 	 */
 	public function afterSave(Model $Model, $created, $options = array()) {
+		if (empty($this->settings[$Model->alias]['rebuildOnUpdate'])) {
+			return true;
+		}
 		// get data to save
 		$association_key = $Model->id;
 		if (empty($association_key)) {

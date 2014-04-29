@@ -494,7 +494,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		if (empty($results)) {
 			return array();
 		}
-		return Hash::extract($results, '{n}.association_key');
+		return Hash::extract($results, '{n}.association_key.0');
 	}
 
 	/**

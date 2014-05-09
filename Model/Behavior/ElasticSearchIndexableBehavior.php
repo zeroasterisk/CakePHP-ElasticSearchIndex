@@ -435,8 +435,19 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @return string $index
 	 */
 	private function __cleanForIndex(Model $Model, $index) {
-		$index = iconv('UTF-8', 'ASCII//TRANSLIT', $index);
-		$index = preg_replace('/[\ ]+/',' ',$index);
+		$utf8 = @iconv('UTF-8', 'UTF-8//TRANSLIT', $index);
+		if (!empty($utf8)) {
+			// iconv failed... @http://webcollab.sourceforge.net/unicode.html
+			$utf8 = preg_replace('/[\x00-\x08\x10\x0B\x0C\x0E-\x19\x7F]'.
+				'|(?<=^|[\x00-\x7F])[\x80-\xBF]+'.
+				'|([\xC0\xC1]|[\xF0-\xFF])[\x80-\xBF]*'.
+				'|[\xC2-\xDF]((?![\x80-\xBF])|[\x80-\xBF]{2,})'.
+				'|[\xE0-\xEF](([\x80-\xBF](?![\x80-\xBF]))|(?![\x80-\xBF]{2})|[\x80-\xBF]{3,})/',
+				'�', $index);
+			$utf8 = preg_replace('/\xE0[\x80-\x9F][\x80-\xBF]'.
+				'|\xED[\xA0-\xBF][\x80-\xBF]/S', '?', $utf8);
+		}
+		$index = preg_replace('/[\s\t\n\r]+/', ' ', $utf8);
 		if (method_exists($Model, 'cleanForIndex')) {
 			$index = $Model->cleanForIndex($index);
 		}
@@ -542,9 +553,10 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	public function reIndexAll(Model $Model, $conditions = null, $doSleep = false) {
 		$limit = 100;
 		$page = $indexed = $failed = 0;
+		$order = array($Model->primaryKey => 'asc');
 		do {
 			$page++;
-			$records = $Model->find('all', compact('conditions', 'limit', 'page'));
+			$records = $Model->find('all', compact('conditions', 'limit', 'page', 'order'));
 			foreach ($records as $record) {
 				if ($this->saveToIndex($Model, $record[$Model->alias][$Model->primaryKey], $record)) {
 					$indexed++;

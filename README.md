@@ -170,6 +170,7 @@ public function getDataForIndex($id) {
 		'conditions' => array("{$this->alias}.{$this->primaryKey}" => $id),
 	));
 }
+```
 
 #### Customize Parsing Data for the Index: indexData()
 
@@ -192,6 +193,7 @@ public function indexData() {
 	$data = Hash::filter(Hash::flatten($this->data));
 	return implode(' ', $data);
 }
+```
 
 It should return a string (the text which will be stored in the index)
 

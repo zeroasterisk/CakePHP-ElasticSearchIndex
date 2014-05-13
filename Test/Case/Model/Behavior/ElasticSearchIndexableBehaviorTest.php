@@ -1,6 +1,6 @@
 <?php
 App::uses('AppModel', 'Model');
-App::uses('ElasticSearchIndexableBehavior', 'ElasticSearchIndex.Model.Behavior');
+App::uses('ElasticSearchIndexableBehavior', 'ElasticSearchIndex.Model/Behavior');
 App::uses('ElasticSearchRequest', 'Icing.Lib');
 
 

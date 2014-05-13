@@ -14,6 +14,8 @@ gather the data you want to use as a search index... it stores that data to
 ElasticSearch via it's own datasource, `index` as setup via the (above) Elastic
 plugin.
 
+![ModelData: normal + SearchIndex: ElasticSearch](https://www.filepicker.io/api/file/zCgRIjKzTYG8jScsLtzE)
+
 What you end up with is having you cake and eating it too.
 
 * Your Model and datasource are unchanged and work as before.
@@ -39,33 +41,22 @@ you want to help improve it.*
 
 ## Install
 
-Get this plugin into place
+Get this plugin into place you need to also get the [Icing](https://github.com/AudiologyHoldings/Icing) Plugin
 
 ```
 git submodule add https://github.com/zeroasterisk/CakePHP-ElasticSearchIndex app/Plugin/ElasticSearchIndex
-# or
-git clone https://github.com/zeroasterisk/CakePHP-ElasticSearchIndex app/Plugin/ElasticSearchIndex
-```
-
-And install the
-[Icing](https://github.com/AudiologyHoldings/Icing)
-Plugin
-
-```
 git submodule add https://github.com/AudiologyHoldings/Icing app/Plugin/Icing
-# or
+```
+
+or if you don't like submodules:
+
+```
+git clone https://github.com/zeroasterisk/CakePHP-ElasticSearchIndex app/Plugin/ElasticSearchIndex
 git clone https://github.com/AudiologyHoldings/Icing app/Plugin/Icing
 ```
 
-In `app/Config/bootstrap.php` load the plugin
-
-```
-CakePlugin::load('Icing');
-CakePlugin::load('ElasticSearchIndex');
-```
-
-Copy the default `ElasticSearchRequest` configuration into your app and edit it
-to suit your setup.
+Copy the default `ElasticSearchRequest` configuration into your app
+and edit it to suit your setup (*ElasticSearch url/port*).
 
 ```
 cp app/Plugin/Icing/Config/elastic_search_request.php.default app/Config/elastic_search_request.php
@@ -76,6 +67,13 @@ the `default` config...  But only if your tests set the following Configure vari
 
 ```
 Configure::write('inUnitTest', true);
+```
+
+In `app/Config/bootstrap.php` load the plugin
+
+```
+CakePlugin::load('Icing');
+CakePlugin::load('ElasticSearchIndex');
 ```
 
 ### Now setup into any Models you want to search / index
@@ -99,20 +97,22 @@ And here are the behaviour config options, with default values
 			'index' => null,
 			// extra config for ElasticSearchRequest (parsed from URL, or defaulted to $Model->useTable)
 			'table' => null,
-			// limit the search results to this many results
-			'limit' => 200,
-			// details needed to link to Model
-			'foreignKey' => false, // primaryKey to save against
-			// do we build the index after save? (yes...)
+			// do we build the index automatically via the afterSave callback? (recommended)
 			'rebuildOnUpdate' => true,
-			// when we build the index, consider these fields (ignonred if custom method on model)
+			// what fields to used when we build the index (ignonred if custom method on model)
 			//   eg: array('title', 'name', 'email', 'city', 'state',  'country'),
-			//   or for all (text/varchar) fields: '*'
+			//       or for all (text/varchar) fields: '*' (default)
 			'fields' => '*',
-			// when we build the index, do we find data first? (if false, we only have the data which was saved)
+			// when we build the index, do we find data first?
+			//   false: we only have the data which was saved this time
+			//   true: we do a find() afterSave() to get all fields
 			'queryAfterSave' => true,
 			// optional config for HttpSocket (better to configure ElasticSearchRequest)
+			// limit the search results to this many results
+			'limit' => 200,
 			'request' => array(),
+			// details needed to link to Model (edge cases)
+			'foreignKey' => false, // primaryKey to save against
 		),
 	);
 ```
@@ -122,49 +122,99 @@ And here are the behaviour config options, with default values
 It's **automatic, after every save**, the behaviour will post that record to the ElasticSearch index.
 
 If you want to manually index any model `$data` arrays (with the fields from
-this model), in your `Model` you can do:
+this model), in your `Model` you can do so with `saveToIndex($id, $data)`...
 
 ```
+// in a Model
 $data = $this->read(null, '1234');
 $id = $data[$this->alias][$this->primaryKey];
 $success = $this->saveToIndex($id, $data);
 ```
 
 If you have a simple string, you want to index for a record on your `Model`
-then you can use:
+then you can use `saveIndexDataToIndex($id, $indexString)`
 
 ```
-$id = '1234';
-$success = $this->saveIndexDataToIndex($id, 'This is a custom string, this will be indexed');
+// in a Model
+$success = $this->saveIndexDataToIndex(1234, 'This is a custom string, this will be indexed');
 ```
+
+*(want to index all of your records?  see below for `reIndexAll()`)*
+
 ### Customize the data to save to the Index
 
-You can specify a few methods on your model, which override the basic
-functionality.
+You can specify a few methods on your model, which override the basic functionality.
+This allows you to customize how we get data to create the index and how we
+parse that data to create the index string.
 
-Make this method on your model to get customized data for the indexing.
-It should return a data array for a single record, similar to a `find('first')`
+#### Customize Getting Data for the Index: getDataForIndex()
+
+Make this method on your model to control, extend the data gathered for
+indexing...
+
+This is useful if you need to contain other data.  A blog Post might need to be
+searchable via the content of the Post as well as all of the comments.
+
 
 ```
-$findFirstData = $this->getDataForIndex($id)
+/**
+ * This method will customize the 'find' ElasticSearchIndex uses to get data for it's index
+ *
+ * @param mixed $id
+ * @return array $record find('first')
+ */
+public function getDataForIndex($id) {
+	return $this->find('first', array(
+		'fields' => array('id', 'title', 'body', 'date'),
+		'contain' => array('Comment' => array('subject', 'body')),
+		'conditions' => array("{$this->alias}.{$this->primaryKey}" => $id),
+	));
+}
+
+#### Customize Parsing Data for the Index: indexData()
+
+Make this method on your Model to process a data array into a string for indexing.
+
 ```
-
-Make this method on your Model to process a data array into a string for
-indexing.
-
-It expects to get it's data array from `$this->data` not from a passed in argument
+/**
+ * This method will customize the parsing of
+ * (array)data->(string)index for ElasticSearchIndex
+ *
+ * NOTE: the data must be set on the Model->data already
+ *
+ * @return string $index
+ */
+public function indexData() {
+	if (empty($this->data)) {
+		return '';
+	}
+	// you'd want to customize this a bit more
+	$data = Hash::filter(Hash::flatten($this->data));
+	return implode(' ', $data);
+}
 
 It should return a string (the text which will be stored in the index)
 
-```
-$indexText = $this->indexData()
-```
+#### Customize Cleaning Data for the Index: cleanForIndex()
 
 Make this method on your Model to clean or post-process the index text.
 You can replace terms, characters or whatever you like.
 
 ```
-$indexText = $this->cleanForIndex($indexText)
+/**
+ * This method will Customize the cleaning of (string)index data
+ *
+ * @param string $index
+ * @return string $index
+ */
+public function cleanForIndex($index) {
+	if (!empty($this->cursewords)) {
+		str_replace($this->cursewords, '#&$@!', $index);
+	}
+	preg_replace('#[^0-9a-zA-Z\s]#', ' ', $index);
+	preg_replace('#[\s]+#', ' ', $index);
+	return $index;
+}
 ```
 
 ## How to re-index all Records
@@ -173,12 +223,20 @@ In any Model you can run `reIndexAll($conditions)` and it will walk through
 your data and re-index all of them... it can be really slow...
 
 ```
+// in Controller
 // this is really slow, but it will re-index everything (create/update indexes)
-$statusString = $this->reIndexAll();
+$statusString = $this->MyModel->reIndexAll();
 // or you can pass in any conditions you like to limit the scope of the reIndex
-$statusString = $this->reIndexAll(array(
+$statusString = $this->MyModel->reIndexAll(array(
     'modified >' => date('Y-m-d 00:00:00', strtotime('-2 months')),
 ));
+```
+
+**Pro Tip:** the Icing Plugin has a `DoShell` allowing you to easily run any
+method on any Model... so from a command line you can do:
+
+```
+./cake Icing.do MyModel reIndexAll
 ```
 
 ## How to Search
@@ -201,6 +259,7 @@ This is a really useful method, it can easily be added to any `conditions` array
 ```
 $conditions = array(
 	"{$this->alias}.{$this->primaryKey}" => $this->searchAndReturnAssociationKeys('Search Term'),
+	// the rest of my conditions which also have to match
 );
 ```
 

@@ -553,7 +553,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	public function reIndexAll(Model $Model, $conditions = null, $doSleep = false) {
 		$limit = 100;
 		$page = $indexed = $failed = 0;
-		$order = array($Model->primaryKey => 'asc');
+		$order = array("{$Model->alias}.{$Model->primaryKey}" => 'asc');
 		do {
 			$page++;
 			$records = $Model->find('all', compact('conditions', 'limit', 'page', 'order'));

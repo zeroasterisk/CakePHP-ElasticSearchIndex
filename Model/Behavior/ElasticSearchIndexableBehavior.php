@@ -551,14 +551,15 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @return string $status
 	 */
 	public function reIndexAll(Model $Model, $conditions = null, $doSleep = false) {
-		$limit = 100;
+		$limit = 500;
 		$page = $indexed = $failed = 0;
 		$order = array("{$Model->alias}.{$Model->primaryKey}" => 'asc');
+		$fields = array("{$Model->alias}.{$Model->primaryKey}");
 		do {
 			$page++;
-			$records = $Model->find('all', compact('conditions', 'limit', 'page', 'order'));
-			foreach ($records as $record) {
-				if ($this->saveToIndex($Model, $record[$Model->alias][$Model->primaryKey], $record)) {
+			$ids = $Model->find('list', compact('conditions', 'fields', 'limit', 'page', 'order'));
+			foreach ($ids as $id) {
+				if ($this->saveToIndex($Model, $id)) {
 					$indexed++;
 				} else {
 					$failed++;

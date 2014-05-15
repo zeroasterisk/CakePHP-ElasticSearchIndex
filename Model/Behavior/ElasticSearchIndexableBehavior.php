@@ -568,7 +568,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 					sleep(rand(0,3));
 				}
 			}
-		} while (count($records) == $limit);
+		} while (count($ids) == $limit);
 		return sprintf("re-indexed %d records (%d failed)", $indexed, $failed);
 	}
 

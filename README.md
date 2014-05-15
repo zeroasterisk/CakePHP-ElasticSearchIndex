@@ -144,8 +144,15 @@ $success = $this->saveIndexDataToIndex(1234, 'This is a custom string, this will
 ### Customize the data to save to the Index
 
 You can specify a few methods on your model, which override the basic functionality.
-This allows you to customize how we get data to create the index and how we
-parse that data to create the index string.
+
+There are 3 levels of customization available:
+
+* `getDataForIndex()` getting data, allows you to do a custom `find()` adding contains, etc (output = array)
+* `indexData()` parsing/transforming the data from array --> index string
+* `cleanForIndex()` clean/replace the index string (final pass)
+
+NOTE: if you use `getDataForIndex()` to *get extra data*
+you will probably also want to use `indexData()` to *convert into a string*
 
 #### Customize Getting Data for the Index: getDataForIndex()
 
@@ -154,7 +161,6 @@ indexing...
 
 This is useful if you need to contain other data.  A blog Post might need to be
 searchable via the content of the Post as well as all of the comments.
-
 
 ```
 /**

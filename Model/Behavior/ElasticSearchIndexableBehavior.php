@@ -491,6 +491,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @return array $association_keys (results from ElasticSearchIndex records)
 	 */
 	public function searchAndReturnAssociationKeys(Model $Model, $q = '', $findIndexOption = array()) {
+		$start = microtime(true);
 		// TODO: get limit, order, etc. from $findIndexOption
 		$defaults = array(
 			'fields' => 'association_key',
@@ -498,7 +499,31 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 			'page' => 1,
 		);
 		$findIndexOption = array_merge($defaults, $findIndexOption);
-		$results = $this->setupIndex($Model)->search($q, $findIndexOption);
+
+		// get ElasticSearchRequest
+		$ES = $this->setupIndex($Model);
+
+		// perform search on ElasticSearchRequest
+		$results = $ES->search($q, $findIndexOption);
+		$stop = microtime(true);
+
+		// log into the SQL log
+		$DS = $Model->getDataSource();
+		$DS->numRows = count($results);
+		$DS->took = round($stop - $start, 2);
+
+		$log = 'ElasticSearchRequest: ' . $q;
+		if (!empty($ES->last['request'])) {
+			$log = $ES->asCurlRequest($ES->last['request']);
+		}
+		#if (!empty($ES->last['response'])) {
+		#	$log .= "\n;#response:  " . json_encode($ES->last['response']);
+		#}
+		if (!empty($ES->last['error'])) {
+			$log .= "\n;#ERROR:  " . json_encode($ES->last['error']);
+		}
+		$Model->getDataSource()->logQuery($log);
+
 		/* -- * /
 		debug(compact('q', 'results', 'findIndexOption'));die();
 		/* -- */

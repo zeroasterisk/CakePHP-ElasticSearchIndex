@@ -539,6 +539,81 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	}
 
 	/**
+	 * Perform a search on the ElasticSearchIndex table for a Model + term
+	 * Returns keys AND scores.
+	 *
+	 * @param Model $Model
+	 * @param string $q query, term
+	 * @param array $findIndexOption,Ys
+	 * @return array $scoresByAssociatonKey (results from ElasticSearchIndex records)
+	 */
+	public function ESSearchGetKeysByScore(Model $Model, $q = '', $findIndexOption = []) {
+		$start = microtime(true);
+		// TODO: get limit, order, etc. from $findIndexOption
+		$defaults = [
+			'fields' => 'association_key',
+			'limit' => $this->settings[$Model->alias]['limit'],
+			'page' => 1,
+		];
+		$findIndexOption = array_merge($defaults, $findIndexOption);
+
+		// get ElasticSearchRequest
+		$ES = $this->setupIndex($Model);
+
+		// perform search on ElasticSearchRequest
+		$results = $ES->search($q, $findIndexOption);
+		$stop = microtime(true);
+
+		// log into the SQL log
+		$DS = $Model->getDataSource();
+		$DS->numRows = count($results);
+		$DS->took = round($stop - $start, 2);
+
+		$log = 'ElasticSearchRequest: ' . $q;
+		if (!empty($ES->last['request'])) {
+			$log = $ES->asCurlRequest($ES->last['request']);
+		}
+		#if (!empty($ES->last['response'])) {
+		#	$log .= "\n;#response:  " . json_encode($ES->last['response']);
+		#}
+		if (!empty($ES->last['error'])) {
+			$log .= "\n;#ERROR:  " . json_encode($ES->last['error']);
+		}
+		$Model->getDataSource()->logQuery($log);
+
+		/* -- * /
+		debug(compact('q', 'results', 'findIndexOption'));die();
+		/* -- */
+		if (empty($results)) {
+			return [];
+		}
+
+		// transform $results -> $return, an array with KEYS of association_key and VALUES of score.
+		// example: $return = [ 192460 => 0.64, 192453 => 0.48, 188010 => 0.37 ]
+		// ID "192460" is our best matching result with score of "0.64".
+		// ASSUMPTION:  Each association_key is unique per result returned from ES.
+		$return = [];
+		foreach (array_keys($results) as $i) {
+			if (!empty($results[$i]['association_key']) && !empty($results[$i]['association_key'][0])) {
+				// ElasticSearch 1.x and later.
+				$association_key = $results[$i]['association_key'][0];
+			} elseif (!empty($results[$i]['association_key'])) {
+				// Support for pre 1.x versions of ElasticSearch
+				$association_key = $results[$i]['association_key'];
+			} else {
+				// Association key not found.
+				continue;
+			}
+			$score = !empty($results[$i]['_score']) ? $results[$i]['_score'] : null;
+
+			$return[$association_key] = $score;
+			// Unset results array to free memory
+			unset($results[$i]);
+		}
+		return $return;
+	}
+
+	/**
 	 * Takes a set of $results and a list of $ids,
 	 *   it $resorts the results to the order of the $ids.
 	 *

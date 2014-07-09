@@ -530,12 +530,8 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		if (empty($results)) {
 			return array();
 		}
-		$result = Hash::extract($results, '{n}.association_key.{n}');
-		if (empty($result)) {
-			// Support for pre 1.x versions of ElasticSearch
-			$result = Hash::extract($results, '{n}.association_key');
-		}
-		return $result;
+
+		return Hash::extract($results, '{n}.association_key.{n}');
 	}
 
 	/**
@@ -595,11 +591,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		$return = [];
 		foreach (array_keys($results) as $i) {
 			if (!empty($results[$i]['association_key']) && !empty($results[$i]['association_key'][0])) {
-				// ElasticSearch 1.x and later.
 				$association_key = $results[$i]['association_key'][0];
-			} elseif (!empty($results[$i]['association_key'])) {
-				// Support for pre 1.x versions of ElasticSearch
-				$association_key = $results[$i]['association_key'];
 			} else {
 				// Association key not found.
 				continue;

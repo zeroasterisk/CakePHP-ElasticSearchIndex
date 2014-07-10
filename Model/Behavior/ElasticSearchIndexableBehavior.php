@@ -207,7 +207,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	}
 
 	/**
-	 * After a record is deleted, also remove it's ElasticSearchIndex row
+	 * After a record is deleted, also remove its ElasticSearchIndex row
 	 *  -- note: be sure that the Model->id is set
 	 *
 	 * @param Model $Model
@@ -588,7 +588,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		$DS->numRows = count($results);
 		$DS->took = round($stop - $start, 2) * 1000;
 
-		$log = 'ElasticSearchRequest: ' . $q;
+		$log = 'ElasticSearchRequest: ' . is_array($q) ? print_r($q, true) : $q;
 		if (!empty($ES->last['request'])) {
 			$log = $ES->asCurlRequest($ES->last['request']);
 		}
@@ -668,7 +668,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	}
 
 	/**
-	 * If you have never setup this index in ElasticSearch before,
+	 * If you have never set up this index in ElasticSearch before,
 	 * we need to do so...
 	 *
 	 */
@@ -680,7 +680,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	}
 
 	/**
-	 * If you have never setup this table in ElasticSearch before,
+	 * If you have never set up this table in ElasticSearch before,
 	 * we need to do so...
 	 *
 	 */
@@ -692,6 +692,62 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 			throw new CakeException("The 'table' is not configured");
 		}
 		return $this->ElasticSearchRequest->createMapping($this->mapping, $request);
+	}
+
+	/**
+	 *  This takes a simple text input and turns it a default "match" query with proximity based scoring.
+	 *  Great for a simple search where a user types in whatever without expecting any operators to work.
+	 *
+	 *  @param $terms string
+	 *  Example: $terms = "hand therapy" will return any documents that have either or both words in the document,
+	 *  but any documents that have the words nearby each other will receive a score boost.
+	 *
+	 *  @param $options array
+	 *    keys available:
+	 *    field       - which field to search. defaults to '_all'
+	 *    window_size - the proximity algorithm is expensive.  instead of running it on all results, it will only
+	 *                  run it on the top window_size results.  defaults to 50.
+	 *    slop - basically, how many words apart the words may be to be considered proximate.  defaults to 50.
+	 *           note that even with a value like 50, documents with the words much closer than 50 will score higher
+     *           than documents that are just around the limit of 50.
+	 *
+	 *           See ES documentation for more on window_size and slop.
+	 *
+	 *  @return $query array
+	 *  The return value is an array which you may pass to esSearchGetKeys(), or esSearchGetKeysByScore(), or if
+	 *  you prefer, in Icing's ElasticSearchRequest.. search() or request().
+	 **/
+	public function esStringToProximityQuery(Model $model, $terms = '', $options = []) {
+		$defaults = [
+			'field' => '_all',
+			'window_size' => 50,
+			'slop' => 50,
+		];
+		$options = array_merge($defaults, $options);
+
+		$query = [
+			'query' => [
+				'match' => [
+					$options['field'] => [
+						'query' => $terms,
+					],
+				],
+			],
+			'rescore' => [
+				'window_size' => $options['window_size'],
+				'query' => [
+					'rescore_query' => [
+						'match_phrase' => [
+							$options['field'] => [
+								'query' => $terms,
+								'slop' => $options['slop'],
+							],
+						],
+					],
+				],
+			],
+		];
+		return $query;
 	}
 
 }

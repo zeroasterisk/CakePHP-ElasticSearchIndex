@@ -586,7 +586,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		// log into the SQL log
 		$DS = $Model->getDataSource();
 		$DS->numRows = count($results);
-		$DS->took = round($stop - $start, 2);
+		$DS->took = round($stop - $start, 2) * 1000;
 
 		$log = 'ElasticSearchRequest: ' . $q;
 		if (!empty($ES->last['request'])) {

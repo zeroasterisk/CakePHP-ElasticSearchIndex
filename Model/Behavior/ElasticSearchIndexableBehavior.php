@@ -508,9 +508,12 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 *
 	 * @return array $association_keys (results from ElasticSearchIndex records)
 	 */
-	public function searchAndReturnAssociationKeys(Model $Model, $q = '', $findIndexOption = array()) {
+	public function esSearchGetKeys(Model $Model, $q = '', $findIndexOption = array()) {
 		$results = $this->_ESSearchRawResults($Model, $q, $findIndexOption);
 		return Hash::extract($results, '{n}.association_key.{n}');
+	}
+	public function searchAndReturnAssociationKeys(Model $Model, $q = '', $findIndexOption = array()) {
+		return esSearchGetKeys($Model, $q, $findIndexOption);
 	}
 
 	/**
@@ -528,7 +531,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @param array $findIndexOption
 	 * @return array $scoresByAssociatonKey (results from ElasticSearchIndex records)
 	 */
-	public function ESSearchGetKeysByScore(Model $Model, $q = '', $findIndexOption = []) {
+	public function esSearchGetKeysByScore(Model $Model, $q = '', $findIndexOption = []) {
 		$results = $this->_ESSearchRawResults($Model, $q, $findIndexOption);
 
 		// transform $results -> $return, an array with KEYS of association_key and VALUES of score.

@@ -509,7 +509,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @return array $association_keys (results from ElasticSearchIndex records)
 	 */
 	public function esSearchGetKeys(Model $Model, $q = '', $findIndexOption = array()) {
-		$results = $this->_ESSearchRawResults($Model, $q, $findIndexOption);
+		$results = $this->_esSearchRawResults($Model, $q, $findIndexOption);
 		return Hash::extract($results, '{n}.association_key.{n}');
 	}
 	public function searchAndReturnAssociationKeys(Model $Model, $q = '', $findIndexOption = array()) {
@@ -532,7 +532,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @return array $scoresByAssociatonKey (results from ElasticSearchIndex records)
 	 */
 	public function esSearchGetKeysByScore(Model $Model, $q = '', $findIndexOption = []) {
-		$results = $this->_ESSearchRawResults($Model, $q, $findIndexOption);
+		$results = $this->_esSearchRawResults($Model, $q, $findIndexOption);
 
 		// transform $results -> $return, an array with KEYS of association_key and VALUES of score.
 		// example: $return = [ 192460 => 0.64, 192453 => 0.48, 188010 => 0.37 ]
@@ -566,7 +566,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @param array $findIndexOption
 	 * @return array $association_keys (results from ElasticSearchIndex records)
 	 */
-	public function _ESSearchRawResults(Model $Model, $q = '', $findIndexOption = []) {
+	public function _esSearchRawResults(Model $Model, $q = '', $findIndexOption = []) {
 		$start = microtime(true);
 		// TODO: get limit, order, etc. from $findIndexOption
 		$defaults = array(

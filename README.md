@@ -249,24 +249,24 @@ method on any Model... so from a command line you can do:
 
 ## How to Search
 
-The core search method for this behavior is `searchAndReturnAssociationKeys`
+The core search method for this behavior is `esSearchGetKeys`
 which returns just the `id`s of the `Model`.
 
 ```
-$primaryKeys = $this->searchAndReturnAssociationKeys($term);
+$primaryKeys = $this->esSearchGetKeys($term);
 ```
 
 And with `$optionsForElasticSearchRequest` (`limit`, `page`).
 
 ```
-$primaryKeys = $this->searchAndReturnAssociationKeys($term, $optionsForElasticSearchRequest);
+$primaryKeys = $this->esSearchGetKeys($term, $optionsForElasticSearchRequest);
 ```
 
 This is a really useful method, it can easily be added to any `conditions` array.
 
 ```
 $conditions = array(
-	"{$this->alias}.{$this->primaryKey}" => $this->searchAndReturnAssociationKeys('Search Term'),
+	"{$this->alias}.{$this->primaryKey}" => $this->esSearchGetKeys('Search Term'),
 	// the rest of my conditions which also have to match
 );
 ```
@@ -280,7 +280,7 @@ Search results are usually sorted by which results are the best match for the
 search term.
 
 ```
-$sortedIds = $this->searchAndReturnAssociationKeys('Search Term');
+$sortedIds = $this->esSearchGetKeys('Search Term');
 $results = $this->find('all', array(
 	'conditions' => array(
 		"{$this->alias}.{$this->primaryKey}" => $sortedIds

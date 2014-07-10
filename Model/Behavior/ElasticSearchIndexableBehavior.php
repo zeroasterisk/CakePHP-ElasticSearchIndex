@@ -9,7 +9,7 @@
  * Common Usage
  *   afterSave() - automatically saves an index record to match your saved data
  *   Model->search($term) - returns a findAll()
- *   Model->searchAndReturnAssociationKeys($term) - returns a list of $Model->primaryKey
+ *   Model->esSearchGetKeys($term) - returns a list of $Model->primaryKey
  *   Model->reIndexAll($conditions) - walks through all records and re-indexes them (SLOW!)
  *
  * Advanced Usage
@@ -479,7 +479,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	public function search(Model $Model, $q = '', $findOptions = array(), $findIndexOptions = array()) {
 		$findIndexDefaults = array_intersect_key($findOptions, array('limit', 'page'));
 		$findIndexOptions = Hash::merge($findIndexDefaults, $findIndexOptions);
-		$foundIds = $this->searchAndReturnAssociationKeys($Model, $q = '', $findIndexOptions);
+		$foundIds = $this->esSearchGetKeys($Model, $q = '', $findIndexOptions);
 		if (empty($foundIds)) {
 			return array();
 		}

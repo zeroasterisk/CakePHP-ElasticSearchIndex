@@ -189,9 +189,9 @@ class ElasticSearchIndexableBehaviorTest extends CakeTestCase {
 		$data = array();
 		// not saved, no data to save
 		//   still true, because no error
-		$foundIds_a = $this->User->searchAndReturnAssociationKeys();
+		$foundIds_a = $this->User->esSearchGetKeys();
 		$this->assertTrue($this->User->saveToIndex($id, $data));
-		$foundIds_b = $this->User->searchAndReturnAssociationKeys();
+		$foundIds_b = $this->User->esSearchGetKeys();
 		$this->assertEqual($foundIds_a, $foundIds_b);
 	}
 
@@ -204,7 +204,7 @@ class ElasticSearchIndexableBehaviorTest extends CakeTestCase {
 		);
 		$this->assertTrue($this->User->saveToIndex($id, $data));
 		sleep(1);
-		$found = $this->User->searchAndReturnAssociationKeys(__function__);
+		$found = $this->User->esSearchGetKeys(__function__);
 		$this->assertFalse(empty($found));
 		$this->assertTrue(is_array($found));
 		$id = array_shift($found);
@@ -225,7 +225,7 @@ class ElasticSearchIndexableBehaviorTest extends CakeTestCase {
 		$this->assertFalse(empty($saved));
 		$user = $this->User->read(null, $id);
 		$this->assertEqual($user['User']['id'], $id);
-		$foundIds = $this->User->searchAndReturnAssociationKeys(__function__);
+		$foundIds = $this->User->esSearchGetKeys(__function__);
 		$this->assertTrue(in_array($user['User']['id'], $foundIds));
 		$this->assertEqual($foundIds, array($user['User']['id']));
 		$found = $this->User->search(__function__);

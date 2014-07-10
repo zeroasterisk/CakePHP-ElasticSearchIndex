@@ -456,14 +456,24 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	}
 
 	/**
-	 * Quick and simple search...
+	 * Quick and "simple" search...
 	 *   find ids on ElasticSearch
 	 *   find 'all' on Model, add in the condition of id IN($foundIds)
 	 *
 	 * @param Model $Model
 	 * @param string $q query, term
+	 *   Can be a simple string - if so, it's wrapped as a "query_string" query against the _all field.
+	 *   http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html
+	 *
+	 *   Can also be an array of a custom built query.  If it does have a 'query' key, it will be wrapped in ['query' => $orig].
+	 *   (Is auto wrapping needed/useful?)
+	 *
 	 * @param array $findOptions
+	 *   ???????????
+	 *
 	 * @param array $findIndexOptions
+	 *   Additional options to pass to elasticsearch, like 'from', 'size', and 'min_score'.
+	 *
 	 * @return array $findAll from Model
 	 */
 	public function search(Model $Model, $q = '', $findOptions = array(), $findIndexOptions = array()) {
@@ -486,16 +496,79 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * Perform a search on the ElasticSearchIndex table for a Model + term
 	 *
 	 * @param Model $Model
-	 * @param string $q query, term
-	 * @param array $findIndexOption,Ys
+	 * @param string $q query
+	 *   Can be a simple string - if so, it's wrapped as a "query_string" query against the _all field.
+	 *   http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html
+	 *
+	 *   Can also be an array of a custom built query.  If it does have a 'query' key, it will be wrapped in ['query' => $orig].
+	 *   (Is auto wrapping needed/useful?)
+	 *
+	 * @param array $findIndexOption
+	 *   Additional options to pass to elasticsearch, like 'from', 'size', and 'min_score'.
+	 *
 	 * @return array $association_keys (results from ElasticSearchIndex records)
 	 */
 	public function searchAndReturnAssociationKeys(Model $Model, $q = '', $findIndexOption = array()) {
+		$results = $this->_ESSearchRawResults($Model, $q, $findIndexOption);
+		return Hash::extract($results, '{n}.association_key.{n}');
+	}
+
+	/**
+	 * Perform a search on the ElasticSearchIndex table for a Model + term
+	 * Returns keys AND scores.
+	 *
+	 * @param Model $Model
+	 * @param string $q query, term
+	 *   Can be a simple string - if so, it's wrapped as a "query_string" query against the _all field.
+	 *   http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html
+	 *
+	 *   Can also be an array of a custom built query.  If it does have a 'query' key, it will be wrapped in ['query' => $orig].
+	 *   (Is auto wrapping needed/useful?)
+	 *
+	 * @param array $findIndexOption
+	 * @return array $scoresByAssociatonKey (results from ElasticSearchIndex records)
+	 */
+	public function ESSearchGetKeysByScore(Model $Model, $q = '', $findIndexOption = []) {
+		$results = $this->_ESSearchRawResults($Model, $q, $findIndexOption);
+
+		// transform $results -> $return, an array with KEYS of association_key and VALUES of score.
+		// example: $return = [ 192460 => 0.64, 192453 => 0.48, 188010 => 0.37 ]
+		// ID "192460" is our best matching result with score of "0.64".
+		// ASSUMPTION:  Each association_key is unique per result returned from ES.
+		$return = [];
+		foreach (array_keys($results) as $i) {
+			if (!empty($results[$i]['association_key']) && !empty($results[$i]['association_key'][0])) {
+				$association_key = $results[$i]['association_key'][0];
+			} else {
+				// Association key not found.
+				continue;
+			}
+			$score = !empty($results[$i]['_score']) ? $results[$i]['_score'] : null;
+
+			$return[$association_key] = $score;
+			// Unset results array to free memory
+			unset($results[$i]);
+		}
+		return $return;
+	}
+
+	/**
+	 * Perform a search on the ElasticSearchIndex table for a Model + term and return "raw" results.
+	 *
+	 * Note:  "Raw" results are not really raw from elasticsearch, they've already be bastardized by
+	 * Lib/ElasticSearchRequest.php, but at least they're not changed further!
+	 *
+	 * @param Model $Model
+	 * @param string $q query, term
+	 * @param array $findIndexOption
+	 * @return array $association_keys (results from ElasticSearchIndex records)
+	 */
+	public function _ESSearchRawResults(Model $Model, $q = '', $findIndexOption = []) {
 		$start = microtime(true);
 		// TODO: get limit, order, etc. from $findIndexOption
 		$defaults = array(
 			'fields' => 'association_key',
-			'limit' => $this->settings[$Model->alias]['limit'],
+			'size' => $this->settings[$Model->alias]['limit'],
 			'page' => 1,
 		);
 		$findIndexOption = array_merge($defaults, $findIndexOption);
@@ -527,83 +600,10 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		/* -- * /
 		debug(compact('q', 'results', 'findIndexOption'));die();
 		/* -- */
-		if (empty($results)) {
-			return array();
-		}
 
-		return Hash::extract($results, '{n}.association_key.{n}');
+		return empty($results) ? [] : $results;
 	}
 
-	/**
-	 * Perform a search on the ElasticSearchIndex table for a Model + term
-	 * Returns keys AND scores.
-	 *
-	 * @param Model $Model
-	 * @param string $q query, term
-	 * @param array $findIndexOption,Ys
-	 * @return array $scoresByAssociatonKey (results from ElasticSearchIndex records)
-	 */
-	public function ESSearchGetKeysByScore(Model $Model, $q = '', $findIndexOption = []) {
-		$start = microtime(true);
-		// TODO: get limit, order, etc. from $findIndexOption
-		$defaults = [
-			'fields' => 'association_key',
-			'limit' => $this->settings[$Model->alias]['limit'],
-			'page' => 1,
-		];
-		$findIndexOption = array_merge($defaults, $findIndexOption);
-
-		// get ElasticSearchRequest
-		$ES = $this->setupIndex($Model);
-
-		// perform search on ElasticSearchRequest
-		$results = $ES->search($q, $findIndexOption);
-		$stop = microtime(true);
-
-		// log into the SQL log
-		$DS = $Model->getDataSource();
-		$DS->numRows = count($results);
-		$DS->took = round($stop - $start, 2);
-
-		$log = 'ElasticSearchRequest: ' . $q;
-		if (!empty($ES->last['request'])) {
-			$log = $ES->asCurlRequest($ES->last['request']);
-		}
-		#if (!empty($ES->last['response'])) {
-		#	$log .= "\n;#response:  " . json_encode($ES->last['response']);
-		#}
-		if (!empty($ES->last['error'])) {
-			$log .= "\n;#ERROR:  " . json_encode($ES->last['error']);
-		}
-		$Model->getDataSource()->logQuery($log);
-
-		/* -- * /
-		debug(compact('q', 'results', 'findIndexOption'));die();
-		/* -- */
-		if (empty($results)) {
-			return [];
-		}
-
-		// transform $results -> $return, an array with KEYS of association_key and VALUES of score.
-		// example: $return = [ 192460 => 0.64, 192453 => 0.48, 188010 => 0.37 ]
-		// ID "192460" is our best matching result with score of "0.64".
-		// ASSUMPTION:  Each association_key is unique per result returned from ES.
-		$return = [];
-		foreach (array_keys($results) as $i) {
-			if (!empty($results[$i]['association_key']) && !empty($results[$i]['association_key'][0])) {
-				$association_key = $results[$i]['association_key'][0];
-			} else {
-				// Association key not found.
-				continue;
-			}
-			$score = !empty($results[$i]['_score']) ? $results[$i]['_score'] : null;
-
-			$return[$association_key] = $score;
-			// Unset results array to free memory
-			unset($results[$i]);
-		}
-		return $return;
-	}
 
 	/**
 	 * Takes a set of $results and a list of $ids,

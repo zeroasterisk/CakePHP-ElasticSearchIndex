@@ -513,7 +513,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		return Hash::extract($results, '{n}.association_key.{n}');
 	}
 	public function searchAndReturnAssociationKeys(Model $Model, $q = '', $findIndexOption = array()) {
-		return esSearchGetKeys($Model, $q, $findIndexOption);
+		return $this->esSearchGetKeys($Model, $q, $findIndexOption);
 	}
 
 	/**

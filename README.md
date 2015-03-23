@@ -1,5 +1,8 @@
 # Elastic Search Index
 
+> **⚠️ Personal Hobby Project** — This is an independent, personal project by [Alan Blount](https://github.com/zeroasterisk). It is **not affiliated with, endorsed by, or supported by any employer, company, or organization**. No warranty; use at your own risk.
+
+
 This plugin allow for a very easy search index powered by
 [ElasticSearch](http://www.elasticsearch.org/)
 with all kinds of

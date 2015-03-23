@@ -113,6 +113,11 @@ And here are the behaviour config options, with default values
 			'request' => array(),
 			// details needed to link to Model (edge cases)
 			'foreignKey' => false, // primaryKey to save against
+			// optional optimizing configuration, register_shutdown_function()
+			//   if true, we don't actually save on ElasticSearch until
+			//   this script is completed... via register_shutdown_function()
+			//   NOTE: this will "stack" multiple saves if they happen, in order
+			'register_shutdown_function' => false,
 		),
 	);
 ```

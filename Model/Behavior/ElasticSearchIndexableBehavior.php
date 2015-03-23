@@ -54,6 +54,11 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		'queryAfterSave' => true,
 		// optional config for HttpSocket (better to configure ElasticSearchRequest)
 		'request' => array(),
+		// optional optimizing configuration, register_shutdown_function()
+		//   if true, we don't actually save on ElasticSearch until
+		//   this script is completed... via register_shutdown_function()
+		//   NOTE: this will "stack" multiple saves if they happen, in order
+		'register_shutdown_function' => false,
 	);
 
 	/**
@@ -252,7 +257,28 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 			//   still returning true, because not an error case
 			return true;
 		}
-		return $this->saveIndexDataToIndex($Model, $association_key, $data);
+
+		if (!empty($this->settings[$Model->alias]['register_shutdown_function'])) {
+			return $Model->saveIndexDataToIndexInBackground($association_key, $data);
+		}
+		// TODO integrate with a queing system
+		return $Model->saveIndexDataToIndex($association_key, $data);
+	}
+
+	/**
+	 * saves the already created index data to the ElasticSearchIndex as a record
+	 * ON SCRIPT SHUTDOWN - via register_shutdown_function()
+	 *
+	 * @param Model $Model
+	 * @param mixed $association_key
+	 * @param string $data (Search Index Data)
+	 * @return boolean $success or false
+	 */
+	public function saveIndexDataToIndexInBackground(Model $Model, $association_key = null, $data = '') {
+		register_shutdown_function(function() use ($Model, $association_key, $data) {
+			$Model->saveIndexDataToIndex($association_key, $data);
+		});
+		return true;
 	}
 
 	/**

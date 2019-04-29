@@ -559,15 +559,16 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 */
 	public function esSearchGetKeysByScore(Model $Model, $q = '', $findIndexOption = []) {
 		$results = $this->_esSearchRawResults($Model, $q, $findIndexOption);
-
 		// transform $results -> $return, an array with KEYS of association_key and VALUES of score.
 		// example: $return = [ 192460 => 0.64, 192453 => 0.48, 188010 => 0.37 ]
 		// ID "192460" is our best matching result with score of "0.64".
 		// ASSUMPTION:  Each association_key is unique per result returned from ES.
 		$return = [];
 		foreach (array_keys($results) as $i) {
-			if (!empty($results[$i]['association_key']) && !empty($results[$i]['association_key'][0])) {
+			if (!empty($results[$i]['association_key']) && is_array($results[$i]['association_key'])) {
 				$association_key = $results[$i]['association_key'][0];
+			} else if (!empty($results[$i]['association_key'])) {
+				$association_key = $results[$i]['association_key'];
 			} else {
 				// Association key not found.
 				continue;

@@ -89,9 +89,9 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 	 * @var array
 	 */
 	public $mapping = array(
-		'association_key' => array('type' => 'string', 'store' => true),
-		'model' => array('type' => 'string', 'store' => true, 'boost' => 0.2),
-		'data' => array('type' => 'string', 'store' => true),
+		'association_key' => array('type' => 'text', 'store' => true),
+		'model' => array('type' => 'text', 'store' => true, 'boost' => 0.2),
+		'data' => array('type' => 'text', 'store' => true),
 		'created' => array('type' => 'date', 'store' => false, 'format' => 'yyyy-MM-dd HH:mm:ss||yyyy/MM/dd'),
 		'modified' => array('type' => 'date', 'store' => false, 'format' => 'yyyy-MM-dd HH:mm:ss||yyyy/MM/dd'),
 	);

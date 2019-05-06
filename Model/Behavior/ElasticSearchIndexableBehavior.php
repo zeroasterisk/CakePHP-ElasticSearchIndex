@@ -141,6 +141,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		if (empty($config['table'])) {
 			throw new ElasticSearchIndexException('Missing the "table" configuration - this should be automatic based on Model->useTable');
 		}
+		$config['index'] .= '_'.$config['table']; ##ES 6 did away with type mapping.  Need to  make separate indexes per data type
 		// autosetup index & table mapping
 		if (!Cache::read("elasticsearchindexablebehavior_setup_{$config['table']}", 'default')) {
 			$this->autoSetupElasticSearchIndex($config);

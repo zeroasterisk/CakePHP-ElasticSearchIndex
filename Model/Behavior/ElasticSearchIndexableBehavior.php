@@ -776,4 +776,25 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 		return $query;
 	}
 
+    /**
+     * Method used to pass in a query and check if the ES term exists based on that criteria
+     * Allows for specific matches on a keys, eg.
+     * { "_source": true, "query" : { "term" : { "association_key" : "160524"  } } }
+     *
+     * @param Model $Model
+     * @param string $query
+     * @return bool
+     */
+    public function hasEsTerm(Model $Model, $query = '') {
+
+        $additionalOptions = array(
+            'size' => 1
+        );
+
+        $results = $this->_esSearchRawResults($Model, $query, $additionalOptions);
+
+        return !empty($results) ? true : false;
+
+    }
+
 }

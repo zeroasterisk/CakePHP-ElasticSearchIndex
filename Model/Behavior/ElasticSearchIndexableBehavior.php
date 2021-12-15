@@ -793,7 +793,7 @@ class ElasticSearchIndexableBehavior extends ModelBehavior {
 
         $results = $this->_esSearchRawResults($Model, $query, $additionalOptions);
 
-        return !empty($results) ? true : false;
+        return !empty($results);
 
     }
 
